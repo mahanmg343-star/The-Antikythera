@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Antikythera Mechanism — A Working Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#17140f;
+    --parchment:#efe6d2;
+    --parchment-dim:#e2d6ba;
+    --brass:#c9a24b;
+    --brass-bright:#e6c777;
+    --brass-dark:#8c6a2a;
+    --verdigris:#5e8b7e;
+    --rust:#9c5a3c;
+    --bg-deep:#12191a;
+    --bg-deeper:#0c1213;
+    --line: rgba(201,162,75,0.28);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg-deep);
+    color:var(--parchment);
+    font-family:'EB Garamond', serif;
+    font-size:19px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3, .eyebrow, .mono{font-family:'IBM Plex Mono', monospace;}
+  .display{
+    font-family:'Cinzel', serif;
+    letter-spacing:0.04em;
+  }
+  a{color:var(--brass-bright);}
+  ::selection{background:var(--brass); color:var(--ink);}
+  :focus-visible{outline:2px solid var(--brass-bright); outline-offset:3px;}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:0 28px;}
+
+  /* ---------- Background texture ---------- */
+  .stars{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0.5;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    min-height:100svh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    overflow:hidden;
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(201,162,75,0.10), transparent 55%),
+      linear-gradient(180deg, var(--bg-deeper), var(--bg-deep) 60%);
+    padding:120px 24px 80px;
+  }
+  .hero .eyebrow{
+    color:var(--verdigris);
+    font-size:13px;
+    letter-spacing:0.32em;
+    text-transform:uppercase;
+    margin-bottom:22px;
+  }
+  .hero h1{
+    font-size:clamp(2.6rem, 7vw, 5.4rem);
+    line-height:1.02;
+    margin:0 0 22px;
+    color:var(--parchment);
+    text-shadow:0 0 60px rgba(201,162,75,0.18);
+  }
+  .hero h1 em{
+    font-style:normal;
+    color:var(--brass-bright);
+  }
+  .hero p.sub{
+    font-family:'EB Garamond', serif;
+    font-style:italic;
+    font-size:1.3rem;
+    max-width:560px;
+    color:var(--parchment-dim);
+    margin:0 auto 40px;
+  }
+  .scroll-cue{
+    position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; letter-spacing:0.2em; text-transform:uppercase;
+    color:var(--brass-dark);
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .scroll-cue .line{width:1px; height:34px; background:linear-gradient(var(--brass), transparent); animation:pulse-line 2.2s ease-in-out infinite;}
+  @keyframes pulse-line{0%,100%{opacity:0.3;} 50%{opacity:1;}}
+
+  /* ---------- SECTION shell ---------- */
+  section{position:relative; z-index:1; padding:110px 0;}
+  .section-head{max-width:640px; margin:0 0 54px;}
+  .section-head .eyebrow{
+    color:var(--rust); font-size:12px; letter-spacing:0.3em; text-transform:uppercase; margin-bottom:14px;
+  }
+  .section-head h2{
+    font-family:'Cinzel', serif;
+    font-size:clamp(1.7rem, 3.4vw, 2.5rem);
+    color:var(--parchment);
+    margin:0 0 16px;
+    letter-spacing:0.02em;
+  }
+  .section-head p{color:var(--parchment-dim); max-width:56ch; font-size:1.08rem;}
+  .rule{height:1px; background:var(--line); margin:0 0 90px;}
+
+  /* ---------- MECHANISM ---------- */
+  .mechanism-section{
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(94,139,126,0.08), transparent 60%),
+      var(--bg-deep);
+  }
+  .mech-layout{
+    display:grid;
+    grid-template-columns: minmax(280px, 560px) minmax(240px, 320px);
+    gap:48px;
+    align-items:start;
+    justify-content:center;
+  }
+  @media (max-width: 860px){
+    .mech-layout{grid-template-columns:1fr;}
+  }
+  .mech-stage{
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    touch-action:none;
+  }
+  #mechanism{width:100%; max-width:560px; height:auto; user-select:none; cursor:grab;}
+  #mechanism.dragging{cursor:grabbing;}
+  .zodiac-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    fill:var(--parchment-dim);
+  }
+
+  .plate{
+    background:linear-gradient(180deg, var(--parchment), var(--parchment-dim));
+    color:var(--ink);
+    border-radius:2px;
+    padding:26px 26px 22px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(140,106,42,0.35);
+    position:relative;
+  }
+  .plate::before{
+    content:"";
+    position:absolute; inset:6px;
+    border:1px solid rgba(140,106,42,0.35);
+    pointer-events:none;
+  }
+  .plate h3{
+    margin:0 0 14px;
+    font-size:12px;
+    letter-spacing:0.24em;
+    text-transform:uppercase;
+    color:var(--brass-dark);
+    border-bottom:1px solid rgba(140,106,42,0.3);
+    padding-bottom:10px;
+  }
+  .readout-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:7px 0;
+    border-bottom:1px dotted rgba(23,20,15,0.18);
+    font-size:15px;
+  }
+  .readout-row:last-child{border-bottom:none;}
+  .readout-row .label{color:#4a4432; font-family:'EB Garamond',serif; font-style:italic;}
+  .readout-row .value{font-family:'IBM Plex Mono', monospace; font-weight:500; letter-spacing:0.02em;}
+
+  .controls{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:18px;
+  }
+  .controls button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.05em;
+    background:transparent;
+    border:1px solid var(--brass-dark);
+    color:var(--brass-bright);
+    padding:9px 12px;
+    cursor:pointer;
+    border-radius:2px;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  .controls button:hover{background:var(--brass); color:var(--ink);}
+  .controls .reset{border-color:var(--rust); color:var(--rust);}
+  .controls .reset:hover{background:var(--rust); color:var(--parchment);}
+  .hint{
+    font-size:13px; color:var(--brass-dark); margin-top:14px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.02em;
+  }
+
+  .spiral-row{display:flex; gap:18px; margin-top:22px;}
+  .spiral-card{flex:1; text-align:center;}
+  .spiral-card svg{width:100%; height:auto;}
+  .spiral-card .cap{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:var(--brass-dark); margin-top:6px; display:block;}
+
+  /* ---------- DISCOVERY ---------- */
+  .discovery-grid{display:grid; grid-template-columns: 1fr 1fr; gap:56px; align-items:center;}
+  @media (max-width:780px){.discovery-grid{grid-template-columns:1fr;}}
+  .wreck-art{width:100%; height:auto;}
+  .timeline{list-style:none; margin:0; padding:0;}
+  .timeline li{
+    display:grid; grid-template-columns:84px 1fr; gap:18px;
+    padding:18px 0;
+    border-top:1px solid var(--line);
+  }
+  .timeline li:first-child{border-top:none;}
+  .timeline .yr{font-family:'IBM Plex Mono',monospace; color:var(--brass-bright); font-size:15px; padding-top:2px;}
+  .timeline .ev p{margin:0; color:var(--parchment-dim);}
+  .timeline .ev strong{color:var(--parchment); font-family:'Cinzel',serif; font-weight:500; font-size:0.95rem; letter-spacing:0.02em;}
+
+  /* ---------- GEAR TRAIN CARDS ---------- */
+  .card-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:1px; background:var(--line);}
+  @media (max-width:780px){.card-grid{grid-template-columns:1fr;}}
+  .card{background:var(--bg-deep); padding:34px 30px;}
+  .card .num{font-family:'IBM Plex Mono',monospace; color:var(--rust); font-size:13px; letter-spacing:0.1em; margin-bottom:14px; display:block;}
+  .card h3{font-family:'Cinzel',serif; font-size:1.15rem; color:var(--parchment); margin:0 0 12px; font-weight:600;}
+  .card p{color:var(--parchment-dim); font-size:0.98rem; margin:0;}
+
+  /* ---------- LEGACY ---------- */
+  .legacy{text-align:center;}
+  .legacy blockquote{
+    font-family:'Cinzel', serif;
+    font-size:clamp(1.3rem, 2.6vw, 1.9rem);
+    max-width:760px; margin:0 auto 28px;
+    color:var(--parchment);
+    line-height:1.45;
+    font-weight:500;
+  }
+  .legacy cite{
+    font-family:'IBM Plex Mono', monospace;
+    font-style:normal; font-size:13px;
+    color:var(--brass-dark); letter-spacing:0.1em; text-transform:uppercase;
+  }
+
+  footer{
+    padding:44px 0 60px;
+    text-align:center;
+    border-top:1px solid var(--line);
+    color:var(--brass-dark);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.08em;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .scroll-cue .line{animation:none;}
+    .ambient-rotate{animation:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<svg class="stars" id="starsSvg" aria-hidden="true"></svg>
+
+<div class="wrap-outer">
+
+  <section class="hero">
+    <div class="eyebrow">circa 150–100 BCE &nbsp;·&nbsp; recovered 1901 &nbsp;·&nbsp; deciphered 2006</div>
+    <h1 class="display">The <em>Antikythera</em><br>Mechanism</h1>
+    <p class="sub">A hand-cranked bronze calculator, drowned for two thousand years, built to predict the sky. Turn its crank below.</p>
+    <div class="scroll-cue"><span class="line"></span>SCROLL</div>
+  </section>
+
+  <section class="mechanism-section" id="mechanism-section">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">01 — The Instrument</div>
+        <h2>A machine that turns time into position</h2>
+        <p>Drag the dial, or use the controls, to advance the mechanism day by day. Watch the sun's pointer cross the zodiac, the moon tick through its phases, and the Metonic and Saros spirals creep toward their next eclipse.</p>
+      </div>
+
+      <div class="mech-layout">
+        <div class="mech-stage">
+          <svg id="mechanism" viewBox="0 0 600 600" role="img" aria-label="Interactive model of the Antikythera Mechanism's front dial, draggable to advance simulated time">
+          </svg>
+        </div>
+
+        <div>
+          <div class="plate">
+            <h3>Dial Readout</h3>
+            <div class="readout-row"><span class="label">Day of cycle</span><span class="value mono" id="rDay">0</span></div>
+            <div class="readout-row"><span class="label">Egyptian date</span><span class="value mono" id="rEgy">I Thoth 1</span></div>
+            <div class="readout-row"><span class="label">Zodiac position</span><span class="value mono" id="rZodiac">♈ Aries</span></div>
+            <div class="readout-row"><span class="label">Lunar phase</span><span class="value mono" id="rMoon">New Moon</span></div>
+            <div class="readout-row"><span class="label">Metonic month</span><span class="value mono" id="rMeton">1 / 235</span></div>
+            <div class="readout-row"><span class="label">Saros series</span><span class="value mono" id="rSaros">1 / 223</span></div>
+
+            <div class="controls">
+              <button data-adv="-30">◀ month</button>
+              <button data-adv="-1">◀ day</button>
+              <button data-adv="1">day ▶</button>
+              <button data-adv="30">month ▶</button>
+              <button data-adv="365">year ▶</button>
+              <button class="reset" data-reset="1">reset</button>
+            </div>
+            <p class="hint">grab the dial and turn it, like the original's side-mounted crank</p>
+          </div>
+
+          <div class="spiral-row">
+            <div class="spiral-card">
+              <svg id="metonSpiral" viewBox="0 0 140 140"></svg>
+              <span class="cap">Metonic — 19yr</span>
+            </div>
+            <div class="spiral-card">
+              <svg id="sarosSpiral" viewBox="0 0 140 140"></svg>
+              <span class="cap">Saros — 18yr</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap"><div class="rule"></div></div>
+
+  <section class="discovery">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">02 — Discovery</div>
+        <h2>Pulled from a wreck off a sponge-diving island</h2>
+      </div>
+      <div class="discovery-grid">
+        <svg class="wreck-art" viewBox="0 0 400 300" role="img" aria-label="Illustration of a diver at a shipwreck"></svg>
+        <ul class="timeline">
+          <li><span class="yr">1900</span><div class="ev"><strong>The wreck</strong><p>Sponge divers sheltering near Antikythera find a Roman-era cargo ship on the seabed, laden with bronze and marble statuary.</p></div></li>
+          <li><span class="yr">1901</span><div class="ev"><strong>A corroded lump</strong><p>Among the salvage, a fused mass of bronze gearwheels goes largely unnoticed for months, dismissed as unremarkable debris.</p></div></li>
+          <li><span class="yr">1902</span><div class="ev"><strong>Gears, seen plainly</strong><p>Archaeologist Valerios Stais notices a gear embedded in the rock, and the fragment is recognized as some kind of instrument.</p></div></li>
+          <li><span class="yr">1974</span><div class="ev"><strong>X-rays and a first model</strong><p>Historian Derek de Solla Price, using gamma-ray images, proposes the device tracked calendrical and astronomical cycles.</p></div></li>
+          <li><span class="yr">2006</span><div class="ev"><strong>The inscriptions read</strong><p>High-resolution CT scanning by an international research team recovers thousands of hidden characters of instructional text, and the gear train is finally mapped in full.</p></div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap"><div class="rule"></div></div>
+
+  <section class="mechanics-explain">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">03 — How It Speaks</div>
+        <h2>Three cycles, driven by one crank</h2>
+        <p>A single handle on the side turned everything at once. Inside, over thirty interlocking bronze gears translated one steady turn into three independent, astronomically correct rhythms.</p>
+      </div>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <span class="num">FRONT DIAL</span>
+        <h3>Sun &amp; Zodiac</h3>
+        <p>A pointer sweeps once around the ecliptic ring per solar year, shown against a fixed 365-day Egyptian calendar — reconciled by a clever slipping gear for the extra quarter-day.</p>
+      </div>
+      <div class="card">
+        <span class="num">FRONT DIAL</span>
+        <h3>Moon &amp; Phase</h3>
+        <p>A second pointer, geared to the moon's uneven pace across the sky, carries a small black-and-silver ball that rotates to show the correct lunar phase for any given day.</p>
+      </div>
+      <div class="card">
+        <span class="num">BACK DIALS</span>
+        <h3>Eclipse Prediction</h3>
+        <p>Two spiral dials — one tracing 235 lunar months over 19 years, the other 223 months over 18 — let the user read off likely eclipse seasons years in advance.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="legacy">
+    <div class="wrap">
+      <blockquote>"Nothing like it existed again for well over a thousand years."</blockquote>
+      <cite>— on the mechanism's place in the history of engineering</cite>
+    </div>
+  </section>
+
+  <footer>
+    A tribute built in the browser · turn the dial, don't just read about it
+  </footer>
+</div>
+
+<script>
+/* ================= Starfield ================= */
+(function(){
+  const svg = document.getElementById('starsSvg');
+  const ns = "http://www.w3.org/2000/svg";
+  const w = window.innerWidth, h = document.body.scrollHeight || 3000;
+  svg.setAttribute('viewBox', `0 0 ${w} ${Math.max(h, 2000)}`);
+  svg.setAttribute('preserveAspectRatio','none');
+  const count = Math.floor((w * Math.max(h,2000)) / 22000);
+  for(let i=0;i<count;i++){
+    const c = document.createElementNS(ns,'circle');
+    c.setAttribute('cx', Math.random()*w);
+    c.setAttribute('cy', Math.random()*Math.max(h,2000));
+    c.setAttribute('r', (Math.random()*1.1+0.2).toFixed(2));
+    c.setAttribute('fill', '#c9a24b');
+    c.setAttribute('opacity', (Math.random()*0.5+0.08).toFixed(2));
+    svg.appendChild(c);
+  }
+})();
+
+/* ================= Wreck illustration ================= */
+(function(){
+  const svg = document.querySelector('.wreck-art');
+  const ns = "http://www.w3.org/2000/svg";
+  function el(tag, attrs){
+    const e = document.createElementNS(ns, tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  // seabed gradient
+  const defs = el('defs',{});
+  const grad = el('linearGradient',{id:'seaGrad', x1:'0', y1:'0', x2:'0', y2:'1'});
+  grad.appendChild(el('stop',{offset:'0%','stop-color':'#0c1213'}));
+  grad.appendChild(el('stop',{offset:'100%','stop-color':'#1a2626'}));
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+  svg.appendChild(el('rect',{x:0,y:0,width:400,height:300,fill:'url(#seaGrad)'}));
+  // seabed line
+  const bed = el('path',{d:'M0,250 Q100,230 200,248 T400,240 L400,300 L0,300 Z', fill:'#0e1616'});
+  svg.appendChild(bed);
+  // wreck hull silhouette (broken ribs)
+  const hull = el('path',{d:'M60,250 Q140,225 260,238 Q300,241 320,250', stroke:'#8c6a2a', 'stroke-width':3, fill:'none', 'stroke-linecap':'round', opacity:0.7});
+  svg.appendChild(hull);
+  for(let x=90; x<310; x+=28){
+    const rib = el('line',{x1:x, y1:238+ (Math.sin(x)*3), x2:x-4, y2:210+Math.random()*10, stroke:'#5e8b7e', 'stroke-width':2, opacity:0.55});
+    svg.appendChild(rib);
+  }
+  // scattered gears/amphorae as circles
+  const spots = [[150,255,7],[175,260,4],[210,252,9],[240,258,5],[130,262,3]];
+  spots.forEach(([x,y,r])=>{
+    svg.appendChild(el('circle',{cx:x,cy:y,r:r, fill:'none', stroke:'#c9a24b', 'stroke-width':1.4, opacity:0.85}));
+  });
+  // diver
+  const diver = el('g',{transform:'translate(230,110)'});
+  diver.appendChild(el('circle',{cx:0,cy:0,r:9, fill:'#efe6d2', opacity:0.9})); // helmet
+  diver.appendChild(el('path',{d:'M-6,8 Q0,40 6,8 Z', fill:'#5e8b7e', opacity:0.85})); // body
+  diver.appendChild(el('line',{x1:-6,y1:14,x2:-22,y2:34, stroke:'#5e8b7e','stroke-width':4,'stroke-linecap':'round'}));
+  diver.appendChild(el('line',{x1:6,y1:14,x2:20,y2:6, stroke:'#5e8b7e','stroke-width':4,'stroke-linecap':'round'}));
+  diver.appendChild(el('line',{x1:-4,y1:44,x2:-14,y2:70, stroke:'#5e8b7e','stroke-width':4,'stroke-linecap':'round'}));
+  diver.appendChild(el('line',{x1:4,y1:44,x2:14,y2:72, stroke:'#5e8b7e','stroke-width':4,'stroke-linecap':'round'}));
+  diver.appendChild(el('line',{x1:0,y1:-9,x2:26,y2:-30, stroke:'#c9a24b','stroke-width':2, opacity:0.6})); // air line
+  svg.appendChild(diver);
+  // bubbles
+  for(let i=0;i<10;i++){
+    svg.appendChild(el('circle',{cx: 250+Math.random()*30, cy: 40+Math.random()*60, r: Math.random()*2+0.6, fill:'#efe6d2', opacity:0.3}));
+  }
+  // light shafts
+  for(let i=0;i<3;i++){
+    svg.appendChild(el('polygon',{points:`${60+i*90},0 ${90+i*90},0 ${40+i*90},300 ${10+i*90},300`, fill:'#c9a24b', opacity:0.035}));
+  }
+})();
+
+/* ================= Main Mechanism ================= */
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs){
+  const e = document.createElementNS(NS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+const CX = 300, CY = 300;
+const mech = document.getElementById('mechanism');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const ZODIAC = [
+  ['♈','Aries'],['♉','Taurus'],['♊','Gemini'],['♋','Cancer'],
+  ['♌','Leo'],['♍','Virgo'],['♎','Libra'],['♏','Scorpio'],
+  ['♐','Sagittarius'],['♑','Capricorn'],['♒','Aquarius'],['♓','Pisces']
+];
+const EGY_MONTHS = ['Thoth','Phaophi','Athyr','Choiak','Tybi','Mechir','Phamenoth','Pharmouthi','Pachons','Payni','Epiphi','Mesore'];
+const MOON_PHASES = ['New Moon','Waxing Crescent','First Quarter','Waxing Gibbous','Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'];
+
+const YEAR = 365.25;
+const SYN_MONTH = 29.530589;
+const METONIC = 235 * SYN_MONTH;   // ~6939.7 days
+const SAROS = 223 * SYN_MONTH;     // ~6585.3 days
+
+let days = 0;
+let ambientAngle = 0;
+
+/* ---- build static rings/ticks/gear teeth once ---- */
+function buildMechanism(){
+  // outer bezel
+  mech.appendChild(svgEl('circle',{cx:CX,cy:CY,r:288, fill:'none', stroke:'var(--brass-dark)', 'stroke-width':2}));
+  mech.appendChild(svgEl('circle',{cx:CX,cy:CY,r:280, fill:'none', stroke:'var(--brass)', 'stroke-width':1, opacity:0.5}));
+
+  // degree ticks
+  const tickLayer = svgEl('g',{});
+  for(let i=0;i<120;i++){
+    const a = i*3 * Math.PI/180;
+    const long = i % 10 === 0;
+    const r1 = 280, r2 = long ? 268 : 274;
+    tickLayer.appendChild(svgEl('line',{
+      x1:CX+r1*Math.cos(a), y1:CY+r1*Math.sin(a),
+      x2:CX+r2*Math.cos(a), y2:CY+r2*Math.sin(a),
+      stroke:'var(--brass-dark)', 'stroke-width': long?1.4:0.8, opacity:0.8
+    }));
+  }
+  mech.appendChild(tickLayer);
+
+  // zodiac ring (fixed reference)
+  mech.appendChild(svgEl('circle',{cx:CX,cy:CY,r:250, fill:'none', stroke:'var(--verdigris)', 'stroke-width':1.2, opacity:0.55}));
+  mech.appendChild(svgEl('circle',{cx:CX,cy:CY,r:206, fill:'none', stroke:'var(--verdigris)', 'stroke-width':1.2, opacity:0.55}));
+  for(let i=0;i<12;i++){
+    const a = (i*30 - 90) * Math.PI/180;
+    const r = 228;
+    const t = svgEl('text',{
+      x:CX+r*Math.cos(a), y:CY+r*Math.sin(a),
+      'text-anchor':'middle', 'dominant-baseline':'middle',
+      class:'zodiac-label', fill:'var(--parchment-dim)'
+    });
+    t.textContent = ZODIAC[i][0];
+    mech.appendChild(t);
+    // divider line
+    const a2 = (i*30 - 90 - 15) * Math.PI/180;
+    mech.appendChild(svgEl('line',{
+      x1:CX+206*Math.cos(a2), y1:CY+206*Math.sin(a2),
+      x2:CX+250*Math.cos(a2), y2:CY+250*Math.sin(a2),
+      stroke:'var(--verdigris)', 'stroke-width':0.8, opacity:0.4
+    }));
+  }
+
+  // egyptian calendar ring (inner)
+  mech.appendChild(svgEl('circle',{cx:CX,cy:CY,r:190, fill:'none', stroke:'var(--brass-dark)', 'stroke-width':1, opacity:0.6}));
+  for(let i=0;i<12;i++){
+    const a2 = (i*30 - 90 - 15) * Math.PI/180;
+    mech.appendChild(svgEl('line',{
+      x1:CX+160*Math.cos(a2), y1:CY+160*Math.sin(a2),
+      x2:CX+190*Math.cos(a2), y2:CY+190*Math.sin(a2),
+      stroke:'var(--brass-dark)', 'stroke-width':0.7, opacity:0.5
+    }));
+  }
+
+  // decorative center gear cluster (ambient, non-data-bearing)
+  const gearLayer = svgEl('g',{id:'gearLayer'});
+  const gearDefs = [
+    {r:60, teeth:14, cx:CX-40, cy:CY+20, dir:1},
+    {r:38, teeth:10, cx:CX+45, cy:CY-10, dir:-1},
+    {r:26, teeth:8,  cx:CX+10, cy:CY+55, dir:1},
+  ];
+  gearDefs.forEach((g, idx)=>{
+    const grp = svgEl('g',{id:'gear'+idx, transform:`translate(${g.cx},${g.cy})`});
+    grp.appendChild(makeGear(g.r, g.teeth));
+    gearLayer.appendChild(grp);
+  });
+  mech.appendChild(gearLayer);
+
+  // sun pointer
+  const sunGrp = svgEl('g',{id:'sunPointer'});
+  sunGrp.appendChild(svgEl('line',{x1:CX,y1:CY,x2:CX,y2:CY-236, stroke:'var(--brass-bright)', 'stroke-width':1.6}));
+  sunGrp.appendChild(svgEl('circle',{cx:CX,cy:CY-236,r:7, fill:'var(--brass-bright)'}));
+  mech.appendChild(sunGrp);
+
+  // moon pointer with phase ball
+  const moonGrp = svgEl('g',{id:'moonPointer'});
+  moonGrp.appendChild(svgEl('line',{x1:CX,y1:CY,x2:CX,y2:CY-198, stroke:'var(--parchment-dim)', 'stroke-width':1.2, opacity:0.85}));
+  const moonBall = svgEl('circle',{cx:CX,cy:CY-198,r:8, fill:'#3a3a3a', stroke:'var(--parchment)', 'stroke-width':1});
+  moonGrp.appendChild(moonBall);
+  const moonShadow = svgEl('path',{id:'moonShadow', fill:'var(--parchment)'});
+  moonGrp.appendChild(moonShadow);
+  mech.appendChild(moonGrp);
+
+  // center hub
+  mech.appendChild(svgEl('circle',{cx:CX,cy:CY,r:10, fill:'var(--brass)'}));
+  mech.appendChild(svgEl('circle',{cx:CX,cy:CY,r:4, fill:'var(--ink)'}));
+
+  // crank handle (drag affordance) at bezel edge
+  const crank = svgEl('g',{id:'crankHandle', transform:`translate(${CX+288},${CY})`});
+  crank.appendChild(svgEl('circle',{cx:0,cy:0,r:14, fill:'var(--rust)', stroke:'var(--brass-bright)', 'stroke-width':2}));
+  crank.appendChild(svgEl('circle',{cx:0,cy:0,r:4, fill:'var(--parchment)'}));
+  mech.appendChild(crank);
+}
+
+function makeGear(r, teeth){
+  const g = svgEl('g',{});
+  const toothLen = r*0.22;
+  let d = '';
+  for(let i=0;i<teeth;i++){
+    const a0 = (i/teeth)*2*Math.PI;
+    const a1 = a0 + (Math.PI/teeth)*0.55;
+    const a2 = a0 + (Math.PI/teeth)*1.0;
+    const a3 = a0 + (Math.PI/teeth)*1.55;
+    const pt = (rad, ang)=>`${(CX*0+rad*Math.cos(ang)).toFixed(2)},${(rad*Math.sin(ang)).toFixed(2)}`;
+    if(i===0) d += `M ${pt(r,a0)} `;
+    else d += `L ${pt(r,a0)} `;
+    d += `L ${pt(r+toothLen,a1)} L ${pt(r+toothLen,a2)} L ${pt(r,a3)} `;
+  }
+  d += 'Z';
+  g.appendChild(svgEl('path',{d, fill:'none', stroke:'var(--brass-dark)', 'stroke-width':1.4, opacity:0.75}));
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r*0.28, fill:'none', stroke:'var(--brass-dark)', 'stroke-width':1, opacity:0.6}));
+  for(let s=0;s<3;s++){
+    const a = s*(2*Math.PI/3);
+    g.appendChild(svgEl('line',{x1:0,y1:0,x2:r*0.85*Math.cos(a), y2:r*0.85*Math.sin(a), stroke:'var(--brass-dark)', 'stroke-width':1, opacity:0.4}));
+  }
+  return g;
+}
+
+/* ---- spiral dials (Metonic / Saros) ---- */
+function buildSpiral(svg, turns, color){
+  const cx=70, cy=70, rInner=14, rOuter=60;
+  svg.innerHTML = '';
+  svg.appendChild(svgEl('circle',{cx,cy,r:rOuter+3, fill:'none', stroke:'var(--brass-dark)', 'stroke-width':1, opacity:0.5}));
+  let d = '';
+  const steps = 400;
+  for(let i=0;i<=steps;i++){
+    const t = i/steps;
+    const rad = rInner + (rOuter-rInner)*t;
+    const ang = t*turns*2*Math.PI - Math.PI/2;
+    const x = cx+rad*Math.cos(ang), y = cy+rad*Math.sin(ang);
+    d += (i===0? 'M':'L') + x.toFixed(2)+','+y.toFixed(2)+' ';
+  }
+  svg.appendChild(svgEl('path',{d, fill:'none', stroke:color, 'stroke-width':1.2, opacity:0.7}));
+  const dot = svgEl('circle',{r:4.5, fill:color, id: svg.id+'Dot'});
+  svg.appendChild(dot);
+  return {cx,cy,rInner,rOuter,turns};
+}
+function positionSpiralDot(svg, geo, t){
+  const rad = geo.rInner + (geo.rOuter-geo.rInner)*t;
+  const ang = t*geo.turns*2*Math.PI - Math.PI/2;
+  const dot = document.getElementById(svg.id+'Dot');
+  dot.setAttribute('cx', geo.cx+rad*Math.cos(ang));
+  dot.setAttribute('cy', geo.cy+rad*Math.sin(ang));
+}
+
+const metonSvg = document.getElementById('metonSpiral');
+const sarosSvg = document.getElementById('sarosSpiral');
+const metonGeo = buildSpiral(metonSvg, 5, 'var(--brass-bright)');
+const sarosGeo = buildSpiral(sarosSvg, 4, 'var(--rust)');
+
+/* ---- render: map `days` to visual + text state ---- */
+function mod(n,m){ return ((n%m)+m)%m; }
+
+function render(){
+  const sunAngle = mod(days, YEAR)/YEAR*360;
+  const moonSynFrac = mod(days, SYN_MONTH)/SYN_MONTH;
+  const moonAngle = moonSynFrac*360;
+  const metonFrac = mod(days, METONIC)/METONIC;
+  const sarosFrac = mod(days, SAROS)/SAROS;
+
+  document.getElementById('sunPointer').setAttribute('transform', `rotate(${sunAngle} ${CX} ${CY})`);
+  document.getElementById('moonPointer').setAttribute('transform', `rotate(${moonAngle} ${CX} ${CY})`);
+
+  // moon phase shading: 0 = new (fully dark overlay), 0.5 = full (no overlay)
+  const illum = (1 - Math.cos(moonSynFrac*2*Math.PI))/2; // 0 new -> 1 full
+  const shadowOpacity = 1 - illum;
+  const moonShadow = document.getElementById('moonShadow');
+  // position shadow crescent over the moon ball (which sits at CX, CY-198 before rotation transform is applied to group)
+  moonShadow.setAttribute('d', `M ${CX-8},${CY-198} a 8,8 0 1,0 16,0 a ${8-illum*16},8 0 1,${moonSynFrac<0.5?1:0} -16,0 Z`);
+  moonShadow.setAttribute('opacity', shadowOpacity.toFixed(2));
+
+  positionSpiralDot(metonSvg, metonGeo, metonFrac);
+  positionSpiralDot(sarosSvg, sarosGeo, sarosFrac);
+
+  // readouts
+  const dayFloor = Math.floor(days);
+  document.getElementById('rDay').textContent = dayFloor;
+
+  const eDay = Math.floor(mod(days, YEAR));
+  let egyText;
+  if(eDay < 360){
+    const m = Math.floor(eDay/30);
+    const dInM = (eDay % 30) + 1;
+    egyText = `${dInM} ${EGY_MONTHS[m]}`;
+  } else {
+    egyText = `Epagomenal ${eDay-360+1}`;
+  }
+  document.getElementById('rEgy').textContent = egyText;
+
+  const zIdx = Math.floor(sunAngle/30) % 12;
+  document.getElementById('rZodiac').textContent = `${ZODIAC[zIdx][0]} ${ZODIAC[zIdx][1]}`;
+
+  const phaseIdx = Math.floor(moonSynFrac*8 + 0.5) % 8;
+  document.getElementById('rMoon').textContent = MOON_PHASES[phaseIdx];
+
+  const metonMonth = Math.floor(metonFrac*235) + 1;
+  document.getElementById('rMeton').textContent = `${metonMonth} / 235`;
+
+  const sarosMonth = Math.floor(sarosFrac*223) + 1;
+  document.getElementById('rSaros').textContent = `${sarosMonth} / 223`;
+}
+
+/* ---- ambient decorative gear rotation ---- */
+function ambientTick(){
+  if(!reduceMotion){
+    ambientAngle += 0.15;
+    document.getElementById('gear0').setAttribute('transform', `translate(${CX-40},${CY+20}) rotate(${ambientAngle})`);
+    document.getElementById('gear1').setAttribute('transform', `translate(${CX+45},${CY-10}) rotate(${-ambientAngle*1.4})`);
+    document.getElementById('gear2').setAttribute('transform', `translate(${CX+10},${CY+55}) rotate(${ambientAngle*1.9})`);
+    requestAnimationFrame(ambientTick);
+  }
+}
+
+/* ---- drag interaction on the crank / dial ---- */
+let dragging = false;
+let lastAngle = 0;
+
+function angleFromEvent(evt){
+  const rect = mech.getBoundingClientRect();
+  const scale = 600 / rect.width;
+  const x = (evt.clientX - rect.left) * scale;
+  const y = (evt.clientY - rect.top) * scale;
+  return Math.atan2(y-CY, x-CX) * 180/Math.PI;
+}
+
+mech.addEventListener('pointerdown', (e)=>{
+  dragging = true;
+  mech.classList.add('dragging');
+  lastAngle = angleFromEvent(e);
+  mech.setPointerCapture(e.pointerId);
+});
+mech.addEventListener('pointermove', (e)=>{
+  if(!dragging) return;
+  const a = angleFromEvent(e);
+  let delta = a - lastAngle;
+  if(delta > 180) delta -= 360;
+  if(delta < -180) delta += 360;
+  lastAngle = a;
+  days += delta * (30/360) * 4; // sensitivity: full turn ~= 120 days
+  render();
+});
+function endDrag(e){
+  dragging = false;
+  mech.classList.remove('dragging');
+}
+mech.addEventListener('pointerup', endDrag);
+mech.addEventListener('pointercancel', endDrag);
+mech.addEventListener('pointerleave', endDrag);
+
+/* ---- buttons ---- */
+document.querySelectorAll('[data-adv]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    days += parseFloat(btn.getAttribute('data-adv'));
+    render();
+  });
+});
+document.querySelector('.reset').addEventListener('click', ()=>{
+  days = 0;
+  render();
+});
+
+/* ---- init ---- */
+buildMechanism();
+render();
+if(!reduceMotion) requestAnimationFrame(ambientTick);
+
+</script>
+</body>
+</html>
